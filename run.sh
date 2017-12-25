@@ -23,36 +23,36 @@ rm -f $BINARYFILE
 printf "${ORANGE}* Building noisy ${NC}\n"
 bash build.sh "$SRC" "$DST"
 
-	if [ -x $BINARYFILE ]
+if [ -x $BINARYFILE ]
+then
+	SIGNATURE=$(get_md5sum $BINARYFILE)
+	VERSION=$(docker images | grep "$IMAGENAME" | awk '{ print $2 }')
+	if [ "$SIGNATURE" == "$ORIGINALSIGNATURE" ]
 	then
-		SIGNATURE=$(get_md5sum $BINARYFILE)
-		VERSION=$(docker images | grep "$IMAGENAME" | awk '{ print $2 }')
-		if [ "$SIGNATURE" == "$ORIGINALSIGNATURE" ]
+		printf "${BLUE}* skiping image generation, since the app has not changed${NC}\n"
+	else
+		if [ "$VERSION" ]
 		then
-			printf "${BLUE}* skiping image generation, since the app has not changed${NC}\n"
-		else
-			if [ "$VERSION" ]
-			then
-				printf "${ORANGE}* Deleting image $IMAGENAME:$VERSION ${NC}\n"
-				docker rmi $IMAGENAME:$VERSION
-			fi
-			TAGVERSION=$(git tag | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | tail -n 1)
-			if [ "$TAGVERSION" ]
-			then
-				PATCHNUMBER=$(echo "$TAGVERSION" | grep -Eo "[0-9]+$")
-				VERSION=${TAGVERSION%$PATCHNUMBER}$((PATCHNUMBER+1))
-			fi
-			printf "${ORANGE}* Building docker image $IMAGENAME:$VERSION ${NC}\n"
-			docker build -t $IMAGENAME:$VERSION docker/
+			printf "${ORANGE}* Deleting image $IMAGENAME:$VERSION ${NC}\n"
+			docker rmi $IMAGENAME:$VERSION
 		fi
-		IMAGESNUMBER=$(docker images $IMAGENAME:$VERSION --format "{{.ID}}" | wc -l)
-		if [ $IMAGESNUMBER -gt 0 ]
+		TAGVERSION=$(git tag | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | tail -n 1)
+		if [ "$TAGVERSION" ]
 		then
-			printf "${ORANGE}* Running container ${NC}\n"
-			docker run --rm=true -ti $IMAGENAME:$VERSION
+			PATCHNUMBER=$(echo "$TAGVERSION" | grep -Eo "[0-9]+$")
+			VERSION=${TAGVERSION%$PATCHNUMBER}$((PATCHNUMBER+1))
 		fi
-		exit 0
+		printf "${ORANGE}* Building docker image $IMAGENAME:$VERSION ${NC}\n"
+		docker build -t $IMAGENAME:$VERSION docker/
 	fi
+	IMAGESNUMBER=$(docker images $IMAGENAME:$VERSION --format "{{.ID}}" | wc -l)
+	if [ $IMAGESNUMBER -gt 0 ]
+	then
+		printf "${ORANGE}* Running container ${NC}\n"
+		docker run --rm=true -ti $IMAGENAME:$VERSION
+	fi
+	exit 0
+fi
 
 printf  "${RED}* Build iled!!${NC}\n"
 exit 1
