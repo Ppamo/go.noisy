@@ -28,6 +28,12 @@ then
 		fi
 		echo "* Building docker image $DOMAIN/$APPNAME:$VERSION"
 		docker build -t $DOMAIN/$APPNAME:$VERSION docker/
+		IMAGESNUMBER=$(docker images $DOMAIN/$APPNAME:$VERSION --format "{{.ID}}" | wc -l)
+		if [ $IMAGESNUMBER -gt 0 ]
+		then
+			echo "* Running container"
+			docker run --rm=true -ti $DOMAIN/$APPNAME:$VERSION
+		fi
 		exit 0
 	fi
 fi
