@@ -7,6 +7,7 @@ get_md5sum(){
 	fi
 }
 
+FORCEIMAGEBUILD="${FORCEIMAGEBUILD:-0}"
 VERSION=0.1.0
 SRC="github.com/Ppamo/go.noisy"
 DST="src/github.com/Ppamo/go.noisy/bin/noisy"
@@ -26,12 +27,20 @@ bash build.sh "$SRC" "$DST"
 if [ -x $BINARYFILE ]
 then
 	SIGNATURE=$(get_md5sum $BINARYFILE)
-	VERSION=$(docker images | grep "$IMAGENAME" | awk '{ print $2 }')
-	if [ "$SIGNATURE" == "$ORIGINALSIGNATURE" ]
+	IMAGEVERSION=$(docker images | grep "$IMAGENAME" | awk '{ print $2 }')
+	if [ -z "$IMAGEVERSION" ]
+	then
+		# the image does not exists so it should be built
+		FORCEIMAGEBUILD=1
+	else
+		VERSION=$IMAGEVERSION
+	fi
+
+	if [ "$SIGNATURE" == "$ORIGINALSIGNATURE" -a "$FORCEIMAGEBUILD" == "0" ]
 	then
 		printf "${BLUE}* skiping image generation, since the app has not changed${NC}\n"
 	else
-		if [ "$VERSION" ]
+		if [ "$IMAGEVERSION" ]
 		then
 			printf "${ORANGE}* Deleting image $IMAGENAME:$VERSION ${NC}\n"
 			docker rmi $IMAGENAME:$VERSION
