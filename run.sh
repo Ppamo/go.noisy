@@ -8,9 +8,10 @@ get_md5sum(){
 }
 
 VERSION=0.1.0
-BINARYFILE=docker/noisy
-DOMAIN=ppamo.cl
-APPNAME=noisy
+SRC="github.com/Ppamo/go.noisy"
+DST="src/github.com/Ppamo/go.noisy/bin/noisy"
+BINARYFILE="$GOLANG/$DST"
+IMAGENAME="ppamo.cl/noisy"
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 ORANGE='\033[0;33m'
@@ -20,22 +21,20 @@ ORIGINALSIGNATURE=$(get_md5sum $BINARYFILE)
 rm -f $BINARYFILE
 
 printf "${ORANGE}* Building noisy ${NC}\n"
-go get && CGO_ENABLED=0 GOOS=linux go build -v -a -installsuffix cgo -o $BINARYFILE .
+bash build.sh "$SRC" "$DST"
 
-if [ $? -eq 0 ]
-then
 	if [ -x $BINARYFILE ]
 	then
 		SIGNATURE=$(get_md5sum $BINARYFILE)
-		VERSION=$(docker images | grep "$DOMAIN/$APPNAME" | awk '{ print $2 }')
+		VERSION=$(docker images | grep "$IMAGENAME" | awk '{ print $2 }')
 		if [ "$SIGNATURE" == "$ORIGINALSIGNATURE" ]
 		then
 			printf "${BLUE}* skiping image generation, since the app has not changed${NC}\n"
 		else
 			if [ "$VERSION" ]
 			then
-				printf "${ORANGE}* Deleting image $DOMAIN/$APPNAME:$VERSION ${NC}\n"
-				docker rmi $DOMAIN/$APPNAME:$VERSION
+				printf "${ORANGE}* Deleting image $IMAGENAME:$VERSION ${NC}\n"
+				docker rmi $IMAGENAME:$VERSION
 			fi
 			TAGVERSION=$(git tag | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | tail -n 1)
 			if [ "$TAGVERSION" ]
@@ -43,17 +42,17 @@ then
 				PATCHNUMBER=$(echo "$TAGVERSION" | grep -Eo "[0-9]+$")
 				VERSION=${TAGVERSION%$PATCHNUMBER}$((PATCHNUMBER+1))
 			fi
-			printf "${ORANGE}* Building docker image $DOMAIN/$APPNAME:$VERSION ${NC}\n"
-			docker build -t $DOMAIN/$APPNAME:$VERSION docker/
+			printf "${ORANGE}* Building docker image $IMAGENAME:$VERSION ${NC}\n"
+			docker build -t $IMAGENAME:$VERSION docker/
 		fi
-		IMAGESNUMBER=$(docker images $DOMAIN/$APPNAME:$VERSION --format "{{.ID}}" | wc -l)
+		IMAGESNUMBER=$(docker images $IMAGENAME:$VERSION --format "{{.ID}}" | wc -l)
 		if [ $IMAGESNUMBER -gt 0 ]
 		then
 			printf "${ORANGE}* Running container ${NC}\n"
-			docker run --rm=true -ti $DOMAIN/$APPNAME:$VERSION
+			docker run --rm=true -ti $IMAGENAME:$VERSION
 		fi
 		exit 0
 	fi
-fi
+
 printf  "${RED}* Build iled!!${NC}\n"
 exit 1
