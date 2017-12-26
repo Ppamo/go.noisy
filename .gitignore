@@ -1,2 +1,3 @@
 *.swp
 docker/noisy
+bin

@@ -7,19 +7,31 @@ get_md5sum(){
 	fi
 }
 
+if [ -z "$GOPATH" ]
+then
+	echo "* GOPATH is not set!"
+	exit -1
+fi
+
 FORCEIMAGEBUILD="${FORCEIMAGEBUILD:-0}"
 VERSION=0.1.0
 SRC="github.com/Ppamo/go.noisy"
-DST="src/github.com/Ppamo/go.noisy/bin/noisy"
-BINARYFILE="$GOLANG/$DST"
+DST="bin/noisy"
+BINARYFILE="$GOPATH/src/$SRC/$DST"
 IMAGENAME="ppamo.cl/noisy"
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 ORANGE='\033[0;33m'
 NC='\033[0m'
 
+OS=$(uname -o)
+if [ "$OS" == "Cygwin" ]
+then
+	BINARYFILE="/cygdrive$BINARYFILE"
+fi
+
 ORIGINALSIGNATURE=$(get_md5sum $BINARYFILE)
-rm -f $BINARYFILE
+rm -f docker/noisy $BINARYFILE
 
 printf "${ORANGE}* Building noisy ${NC}\n"
 bash build.sh "$SRC" "$DST"
@@ -52,16 +64,17 @@ then
 			VERSION=${TAGVERSION%$PATCHNUMBER}$((PATCHNUMBER+1))
 		fi
 		printf "${ORANGE}* Building docker image $IMAGENAME:$VERSION ${NC}\n"
+		cp $BINARYFILE docker/
 		docker build -t $IMAGENAME:$VERSION docker/
 	fi
 	IMAGESNUMBER=$(docker images $IMAGENAME:$VERSION --format "{{.ID}}" | wc -l)
 	if [ $IMAGESNUMBER -gt 0 ]
 	then
 		printf "${ORANGE}* Running container ${NC}\n"
-		docker run --rm=true -ti $IMAGENAME:$VERSION
+		docker run --rm -i $IMAGENAME:$VERSION
 	fi
 	exit 0
 fi
 
-printf  "${RED}* Build iled!!${NC}\n"
+printf  "${RED}* Build failed!!${NC}\n"
 exit 1
