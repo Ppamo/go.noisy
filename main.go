@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MaxPause = 12
+	MaxPause = 5
 	MaxWords = 30
 	MinWords = 5
 )
