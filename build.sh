@@ -1,5 +1,5 @@
 #!/bin/bash
-DOCKERIMAGE="${DOCKERIMAGE:-docker.io/golang:1.9.2}"
+DOCKERIMAGE="${DOCKERIMAGE:-docker.io/golang:1.9.2-alpine}"
 SRC=$1
 DST=$2
 
@@ -15,4 +15,4 @@ then
 	fi
 fi
 
-docker run --rm --privileged=true -i -v "$GOPATH:/go" "$DOCKERIMAGE" /bin/bash -c "$CMD"
+docker run --rm --privileged=true -i -v "$GOPATH:/go" "$DOCKERIMAGE" /bin/sh -c "$CMD"
