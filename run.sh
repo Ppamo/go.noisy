@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -z "$GOPATH" ]
+then
+	echo "* GOPATH is not set!"
+	exit -1
+fi
+
 get_md5sum(){
 	if [ -f "$1" ]
 	then
@@ -7,18 +13,26 @@ get_md5sum(){
 	fi
 }
 
-if [ -z "$GOPATH" ]
-then
-	echo "* GOPATH is not set!"
-	exit -1
-fi
+signal_handler(){
+	printf "${ORANGE}* Stoping container %.12s ${NC}\n" "$CONTAINER"
+	docker stop $CONTAINER
+}
 
+# Define different hosts
+HOST_ppamo=ppamo.cl
+HOST_devel=master.cfc:8500
+
+ENV="${ENV:-ppamo}"
+HOST_ENV="HOST_$ENV"
+DOCKERHOST=${!HOST_ENV}
+
+# Local variables
 FORCEIMAGEBUILD="${FORCEIMAGEBUILD:-0}"
 VERSION=0.1.0
 SRC="github.com/Ppamo/go.noisy"
 DST="bin/noisy"
 BINARYFILE="$GOPATH/src/$SRC/$DST"
-IMAGENAME="ppamo.cl/noisy"
+IMAGENAME="$DOCKERHOST/noisy"
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 ORANGE='\033[0;33m'
@@ -71,7 +85,9 @@ then
 	if [ $IMAGESNUMBER -gt 0 ]
 	then
 		printf "${ORANGE}* Running container ${NC}\n"
-		docker run --rm -i $IMAGENAME:$VERSION
+		trap signal_handler SIGINT
+		CONTAINER=$(docker run --rm -d $IMAGENAME:$VERSION)
+		docker logs -f $CONTAINER
 	fi
 	exit 0
 fi
